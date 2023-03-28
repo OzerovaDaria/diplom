@@ -1,0 +1,5 @@
+importlib<2
+networkx<3
+PyYAML<6
+pydantic<2
+libscrc<2

@@ -1,0 +1,10 @@
+From /Users/daria/.conda/envs/mate/lib/python3.7/site-packages/tensorflow/python/training/tracking/tracking.py:111: Model.state_updates (from tensorflow.python.keras.engine.training) is deprecated and will be removed in a future version.
+Instructions for updating:
+This property should not be used in TensorFlow 2.0, as updates are applied automatically.
+From /Users/daria/.conda/envs/mate/lib/python3.7/site-packages/tensorflow/python/training/tracking/tracking.py:111: Layer.updates (from tensorflow.python.keras.engine.base_layer) is deprecated and will be removed in a future version.
+Instructions for updating:
+This property should not be used in TensorFlow 2.0, as updates are applied automatically.
+Assets written to: dte_stand/algorithm/mate/checkpoints/training/Test-gravity_1-dxhash/batch25-lr0.0003-epsilon1e-05-gae0.95-clip0.25-gamma0.99-period5-epoch3/size16-iters8-min_max-nnsize64-drop0.15-tanh/episode1/actor/assets
+Assets written to: dte_stand/algorithm/mate/checkpoints/training/Test-gravity_1-dxhash/batch25-lr0.0003-epsilon1e-05-gae0.95-clip0.25-gamma0.99-period5-epoch3/size16-iters8-min_max-nnsize64-drop0.15-tanh/episode1/critic/assets
+Assets written to: dte_stand/algorithm/mate/checkpoints/training/Test-gravity_1-dxhash/batch25-lr0.0003-epsilon1e-05-gae0.95-clip0.25-gamma0.99-period5-epoch3/size16-iters8-min_max-nnsize64-drop0.15-tanh/episode2/actor/assets
+Assets written to: dte_stand/algorithm/mate/checkpoints/training/Test-gravity_1-dxhash/batch25-lr0.0003-epsilon1e-05-gae0.95-clip0.25-gamma0.99-period5-epoch3/size16-iters8-min_max-nnsize64-drop0.15-tanh/episode2/critic/assets

@@ -1,0 +1,10 @@
+hash_function: dte_stand.hash_function.WeightedDxHashFunction
+algorithm: dte_stand.algorithm.MateAlgorithm
+path_calculator: dte_stand.paths.DAGCalculator
+
+lsdb_period: 30000
+iterations: 2
+log_path: ./experiment.log
+log_level: DEBUG
+
+debug_check_cycles: 1
