@@ -1,0 +1,8 @@
+*.pyc
+experiment.log
+.idea/
+dte_stand/algorithm/mate/checkpoints/
+dte_stand/algorithm/mate/logs/
+# exclude result folders
+data_examples/*/*-*-*,*-*-*_*
+!.gitignore

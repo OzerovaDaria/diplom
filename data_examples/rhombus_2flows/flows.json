@@ -1,0 +1,24 @@
+[
+    {
+        "start": "1",
+        "end": "4",
+        "all_bandwidth": {
+            "0": 20000000
+        },
+        "start_time": 0,
+        "end_time": 23920,
+        "bandwidth": null,
+        "flow_id": "30a71755-544e-44ca-a358-519b9f8a6db7"
+    },
+    {
+        "start": "1",
+        "end": "4",
+        "all_bandwidth": {
+            "0": 20000000
+        },
+        "start_time": 0,
+        "end_time": 23920,
+        "bandwidth": null,
+        "flow_id": "40a71755-544e-44ca-a358-519b9f8a6db7"
+    }
+]

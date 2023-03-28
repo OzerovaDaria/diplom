@@ -1,0 +1,164 @@
+diff --git a/dte_stand/algorithm/mate/agents/ppo_agent.py b/dte_stand/algorithm/mate/agents/ppo_agent.py
+index eca6376..73a499f 100644
+--- a/dte_stand/algorithm/mate/agents/ppo_agent.py
++++ b/dte_stand/algorithm/mate/agents/ppo_agent.py
+@@ -222,8 +222,8 @@ class PPOAgent(object):
+             states, actions, rewards, log_probs, values, last_value = self.run_episode()
+             returns, advantages = self.gae_estimation(rewards, values, last_value)
+ 
+-            actor_losses, critic_losses, losses = self.run_update(states, actions, returns,
+-                                                                  advantages, log_probs)
++            # actor_losses, critic_losses, losses = self.run_update(states, actions, returns,
++            #                                                       advantages, log_probs)
+             # tf_logs.training_episode_logs(self.writer, self.env, training_episode, states, rewards, losses,
+             #                               actor_losses, critic_losses)
+ 
+@@ -238,11 +238,11 @@ class PPOAgent(object):
+ 
+             print(f'phi = {self.phi(self.env.G)}')
+             PhiCalculator.end_episode()
+-            self.tracker.end_iteration()
++            # self.tracker.end_iteration()
+             self.env.end_iteration()
+ 
+-            if training_episode > 0 and ((training_episode + 1) % self.plot_period == 0):
+-                PhiCalculator.plot_result()
++            # if training_episode > 0 and ((training_episode + 1) % self.plot_period == 0):
++            #     PhiCalculator.plot_result()
+         self.env.get_hash_weights()
+         return self.env.hash_weights
+ 
+diff --git a/dte_stand/algorithm/mate/environment/environment.py b/dte_stand/algorithm/mate/environment/environment.py
+index 19e3ecc..9f605ee 100644
+--- a/dte_stand/algorithm/mate/environment/environment.py
++++ b/dte_stand/algorithm/mate/environment/environment.py
+@@ -153,9 +153,9 @@ class Environment(object):
+         self.num_sample = num_sample - 1
+ 
+     def end_iteration(self):
+-        self.tracker.add_value('phi_values', self.phi_history)
+-        self.tracker.end_iteration()
+-        self.phi_history.clear()
++        # self.tracker.add_value('phi_values', self.phi_history)
++        # self.tracker.end_iteration()
++        # self.phi_history.clear()
+         self.hash_function.end_iteration()
+ 
+     def reset(self, change_sample=False):
+diff --git a/dte_stand/controller.py b/dte_stand/controller.py
+index 3ae97a7..bd4dc0d 100644
+--- a/dte_stand/controller.py
++++ b/dte_stand/controller.py
+@@ -1,3 +1,5 @@
++import copy
++
+ import networkx
+ import os
+ import random
+@@ -26,6 +28,8 @@ class ExperimentController:
+         self.path_calculator = path_calculator
+         self.phi = phi_func
+         self.experiment_dir = experiment_dir
++        self.removed_start = ''
++        self.removed_end = ''
+ 
+     def _get_current_topology_and_time(self, current_time: int) -> tuple[networkx.MultiDiGraph, int]:
+         # get topology and time when topology last changed
+@@ -52,6 +56,13 @@ class ExperimentController:
+         PhiCalculator.plot_full(all_iterations=False)
+         self.hash_function.end_iteration()
+ 
++    def remove_random_link(self, topology: networkx.MultiDiGraph):
++        edges = list(topology.edges())
++        random.shuffle(edges)
++        self.removed_start, self.removed_end = edges[0]
++        topology.remove_edge(self.removed_start, self.removed_end)
++        topology.remove_edge(self.removed_end, self.removed_start)
++
+     def run(self) -> float:
+         hash_weights: Optional[HashWeights] = None
+         current_time = -self.period
+@@ -61,6 +72,7 @@ class ExperimentController:
+             PhiCalculator.set_plot_folder(iteration_path)
+ 
+             current_topo, current_time = self._get_current_topology_and_time(current_time)
++            self.remove_random_link(current_topo)
+             LOG.info(f'current time: {current_time}')
+             current_flows = self.input_data.flows.get(current_time)
+ 
+@@ -75,7 +87,7 @@ class ExperimentController:
+         self._calculate_current_bandwidth(current_topo, current_flows, hash_weights)
+         phi = self.phi(current_topo)
+         LOG.info(f'phi after experiment: {phi}')
+-        return phi
++        return phi, self.removed_start, self.removed_end
+ 
+ 
+ class RandomExperimentController(ExperimentController):
+diff --git a/dte_stand/phi_calculator.py b/dte_stand/phi_calculator.py
+index a6bdc41..c2161bf 100644
+--- a/dte_stand/phi_calculator.py
++++ b/dte_stand/phi_calculator.py
+@@ -137,3 +137,14 @@ class PhiCalculator:
+         # nonzero_phis = [p for p in episode_phi_values[start:end] if p != 0]
+         # LOG.info(f'start = {start} end = {end} zero = {end - start - len(nonzero_phis)} nonzero = {len(nonzero_phis)} zero_fraction = {1 - len(nonzero_phis)/(end - start)}')
+         cls._plot(episode_phi_values[start:end], start, end - 1, end - start, 'episode', f'plot_{start}-{end - 1}.png')
++
++    @classmethod
++    def get_average(cls):
++        sum = 0
++        for value in cls._all_phi_values:
++            sum += value
++        avg = float(sum) / len(cls._all_phi_values)
++        cls._all_phi_values.clear()
++        cls._horizons_phi_values.clear()
++        cls._episodes_phi_values.clear()
++        return avg
+diff --git a/main.py b/main.py
+index 7f0e5ee..ab646ee 100644
+--- a/main.py
++++ b/main.py
+@@ -2,6 +2,7 @@ import importlib
+ import sys
+ import os
+ import argparse
++import json
+ from datetime import datetime
+ from dte_stand.config import Config
+ from dte_stand.history import HistoryTracker
+@@ -46,16 +47,24 @@ if __name__ == '__main__':
+ 
+     init_logger(os.path.join(result_path, config.log_path), config.log_level, ['matplotlib'])
+ 
+-    phi_func = dynamic_import_function(config.phi)
+-    path_calculator = dynamic_import(config.path_calculator)
+-    hash_function = dynamic_import(config.hash_function, path_calculator=path_calculator,
+-                                   debug_check_cycles=config.debug_check_cycles)
+-    algo = dynamic_import(config.algorithm, hash_function=hash_function, phi_func=phi_func, experiment_dir=result_path,
+-                          model_dir=args.model)
++    all_avg = []
++    for _ in range(300):
++        phi_func = dynamic_import_function(config.phi)
++        path_calculator = dynamic_import(config.path_calculator)
++        hash_function = dynamic_import(config.hash_function, path_calculator=path_calculator,
++                                       debug_check_cycles=config.debug_check_cycles)
++        algo = dynamic_import(config.algorithm, hash_function=hash_function, phi_func=phi_func,
++                              experiment_dir=result_path,
++                              model_dir=args.model)
+ 
+-    controller = ExperimentController(
+-            args.experiment_folder, config.lsdb_period, config.iterations, hash_function,
+-            algo, path_calculator, phi_func, result_path)
+-    phi = controller.run()
++        controller = ExperimentController(
++                args.experiment_folder, config.lsdb_period, config.iterations, hash_function,
++                algo, path_calculator, phi_func, result_path)
++        _, start, end = controller.run()
++        all_avg.append((PhiCalculator.get_average(), start, end))
+ 
+-    PhiCalculator.plot_full(all_iterations=True)
++    # PhiCalculator.plot_full(all_iterations=True)
++
++    avg_json = json.dumps(all_avg)
++    with open(os.path.join(result_path, 'avg.json'), 'w') as f:
++        f.write(avg_json)

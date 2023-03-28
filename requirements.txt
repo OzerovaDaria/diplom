@@ -1,0 +1,16 @@
+gin-config<1
+keras<3
+Keras-Applications<2
+Keras-Preprocessing<2
+tensorboard<3
+tensorboard-data-server<1
+tensorboard-plugin-wit<2
+tensorboardX<3
+tensorflow<3
+tensorflow-estimator<3
+tensorflow-probability<1
+matplotlib<4
+networkx<4
+PyYAML<6
+pydantic<2
+libscrc<2

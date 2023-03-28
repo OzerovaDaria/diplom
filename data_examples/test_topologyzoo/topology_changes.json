@@ -1,0 +1,26 @@
+{
+  "10000": {
+    "missing_nodes": ["Amsterdam"],
+    "missing_links": [["San Jose/San Francisco", "Ashburn", 0], ["San Jose/San Francisco", "Los Angeles", 0]]
+  },
+  "40000": {
+    "missing_nodes": ["Amsterdam"],
+    "missing_links": [["San Jose/San Francisco", "Ashburn", 0], ["San Jose/San Francisco", "Los Angeles", 0]]
+  },
+  "45000": {
+    "missing_nodes": ["Amsterdam"],
+    "missing_links": []
+  },
+  "50000": {
+    "missing_nodes": [],
+    "missing_links": []
+  },
+  "80000": {
+    "missing_nodes": ["Brussels", "New York"],
+    "missing_links": [["Phoenix", "Dallas", 0], ["San Jose/San Francisco", "Ashburn", 0]]
+  },
+  "120000": {
+    "missing_nodes": [],
+    "missing_links": []
+  }
+}
