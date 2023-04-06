@@ -4,7 +4,7 @@ path_calculator: dte_stand.paths.DAGCalculator
 phi: dte_stand.phi_calculator.PhiCalculator.calculate_phi
 
 lsdb_period: 30000
-iterations: 20
+iterations: 1
 plot_period: 25
 
 log_path: ./experiment.log
@@ -16,8 +16,8 @@ store_hashweights: 0
 store_nexthops: 0
 
 mate:
-  horizons: 100
-  episodes: 15
+  horizons: 10
+  episodes: 3
   gamma: 0.99
   gae_lambda: 0.95
   reward: min_max

@@ -1,11 +1,3 @@
-'''
-
-                            Online Python Compiler.
-                Code, Compile, Run and Debug python program online.
-Write your code in this editor and press "Run" button to execute it.
-
-'''
-
 import networkx
 import os
 import random
@@ -57,18 +49,40 @@ def get_submarl(experiment_folder="data_examples/huawei"):
     return algo, path_calculator, hash_function
 
 def foo_pool(x, current_topo, current_flows, iteration):
+    #time.sleep(2)
     alg, path_calc, hash_func = get_submarl()
+    #print(x, current_topo.nodes, len(current_flows), iteration)
+    print("GOT IN THREAD")
     path_calc.prepare_iteration(current_topo)
+    print("PREPARED ITER IN THREAD")
+    #calculate_current_bandwidth(current_topo, current_flows, hash_weights)
+    print("THREAD", current_topo.nodes,"\n\n", current_flows, "\n\n")
     hash_weights = alg.step(current_topo, current_flows, iteration)
     with open("hw-" + str(x) + "-pickle", "wb") as f:
             dill.dump(hash_weights, f)
+    print(x, "HASH_WEIGHTS", hash_weights)
+    #PhiCalculator.end_iteration_and_plot_graph()
+    #PhiCalculator.plot_full(all_iterations=False)
+    #hash_func.end_iteration()
+    #return x*x
+
+result_list = []
+def log_result(result):
+    # This is called whenever foo_pool(i) returns a result.
+    # result_list is modified only by the main process, not the pool workers.
+    result_list.append(result)
 
 def apply_async_with_callback(current_topo, current_flows, iteration):
+    #for i in range(len(current_topo)):
+    #    print("ASYNC TOPO", current_topo[i].nodes, current_topo[i].edges)
+    #    print("ASYNC FL", current_flows[i])
+    print("APPLY ASYNC")
     pool = mp.Pool()
     for i in range(len(current_topo)):
         pool.apply_async(foo_pool, args = (i, current_topo[i], current_flows[i], iteration, ))
     pool.close()
     pool.join()
+    #print(result_list)
 
 class ExperimentController:
     def __init__(self, path_to_inputs: str, lsdb_period: int, num_iterations: int,
@@ -109,15 +123,21 @@ class ExperimentController:
         self.hash_function.end_iteration()
 
     def generate_subgraphs(self, topology, num_of_subgraphs):
+        #print("TOPO", topology.edges(data=True))
         my_out_edges = topology.edges(nbunch='2', keys=True)
+        #for a, neighbor, edge_index in my_out_edges:
+        #    print(a, neighbor, edge_index)
+        #print("TOPO NODES", topology.nodes())
         mapping = {}
         for i in topology.nodes():
             mapping[i] = str(int(i) - 1)
+            #print(i, type(i), int(i), str(int(i) - 1))
         topology = networkx.relabel_nodes(topology, mapping)
         adjacency_list = []
         for i in topology.nodes():
             if np.fromiter(topology.neighbors(i), int).size != 0:
                 adjacency_list.append(np.fromiter(topology.neighbors(i), int))
+        #print("ADJENCY matrix", adjacency_list, len(adjacency_list), type(adjacency_list))
         n_cuts, membership = pymetis.part_graph(num_of_subgraphs, adjacency=adjacency_list)
         subgraphs = []
         nodes = []
@@ -131,6 +151,7 @@ class ExperimentController:
             weights_dct = {}
             hypergraph.add_node(str(i))
             current_topology: networkx.MultiDiGraph = copy.deepcopy(topology)
+            #print(i, np.argwhere(np.array(membership) == i).ravel())
             nodes.append(np.argwhere(np.array(membership) == i).ravel())
             nodes[i] = [str(x) for x in nodes[i]]
             current_nodes = topology.nodes
@@ -139,31 +160,56 @@ class ExperimentController:
                     current_topology.remove_node(node)
             for i in current_topology.nodes():
                 mapping[i] = str(int(i) + 1)
+            #for j in current_topology.edges:
+            #    weights_dct[j] = { "weight" : random.randint(1, 7)}
+            #networkx.set_edge_attributes(current_topology, weights_dct)
             subgraphs.append(networkx.relabel_nodes(current_topology, mapping))
+            #print("my topo", subgraphs[i].nodes, subgraphs[i].edges())
         for i in range(num_of_subgraphs):
             for j in nodes[i]:
+                #print(j, end='')
                 for link in topology.in_edges(str(j)):
+                    #print("LINK", link[0], link[1])
                     if link[0] not in nodes[i]:
                         for k in range(len(nodes)):
                             if link[0] in nodes[k]:
+                                #hyp.add_node(link[0])
+                                #hyp.add_node(link[1])
+                                #hyp.add_edge(*link)
+                                #print("LINK HW", link) #and not hypergraph.has_edge(str(i), str(k)):
                                 if  hypergraph.has_edge(str(i), str(k)):
-                                    hypergraph.add_edge(str(i), str(k), keys=1, id='0', bandwidth=40000000, weight=random.randint(1, 7), 
+                                    hypergraph.add_edge(str(i), str(k), keys=1, id='0', bandwidth=40000000, current_bandwidth=0, weight=random.randint(1, 7), 
                                                                                         start=link[0], end=link[1])
                                     hyp.add_edge(link[0], link[1], keys=1, id='0', bandwidth=40000000, weight=random.randint(1, 7))
                                 else:
-                                    hypergraph.add_edge(str(i), str(k), keys=0, id='0', bandwidth=40000000, weight=random.randint(1, 7),
+                                    hypergraph.add_edge(str(i), str(k), keys=0, id='0', bandwidth=40000000, current_bandwidth=0, weight=random.randint(1, 7),
                                                                                         start=link[0], end=link[1])
                                     hyp.add_edge(link[0], link[1], keys=0, id='0', bandwidth=40000000, weight=random.randint(1, 7))
-                
-        routers[0] = {'start': '8', 'end': '5'}
-        routers[1] = {'start': '9', 'end': '12'}
+                '''
+                for link in topology.out_edges(str(j)):
+                    if link[1] not in nodes[i]:
+                        for k in range(len(nodes)):
+                            if link[1] in nodes[k]:
+                                hypergraph.add_edge(k, i)
+                '''
+        #print("HYPERGRAPH")
+        #print(hypergraph.nodes, hypergraph.edges(data=True))
+        #print("HYP")
+        #print(hyp.nodes, hyp.edges(data=True))
+        #for i in range(len(subgraphs)):
+        #    print(subgraphs[i].edges(data=True))
+        routers[0] = {'start': '1', 'end': '5'}
+        routers[1] = {'start': '9', 'end': '15'}
 
+        #for i in range(len(subgraphs)):
+        #    print("SUB", i, subgraphs[i].nodes)
         return subgraphs, hypergraph, routers, hyp
 
     def balance_hypergraph(self, subgraphs, hypergraph, hyp, current_flows, routers, iteration):
         hypergraph_flows, hyp_fl = [], []
         subgraph_flows = [[] for x in range(len(subgraphs))]
         start, end = 0, 0
+        #print("CURRENT FLOWS", current_flows)
         for flow in current_flows:
             for i in range(len(subgraphs)):
                 if flow.start in subgraphs[i]:
@@ -180,11 +226,58 @@ class ExperimentController:
                               start_time=flow.start_time,
                               end_time=flow.end_time, bandwidth=flow.bandwidth, flow_id=flow.flow_id))
         
+        #print("HYPERGRAPH FLOWS")
+        #print(hypergraph_flows)
+        #print("SUBGRAPH FLOWS")
+        #print("SUB 0", subgraph_flows[0], "\n\n\n")
+        #print(subgraph_flows[0])
+        #print("SUB 1", subgraph_flows[1], "\n\n\n")
+        #print(subgraph_flows[1])
+        
         hypergraph_hw = self.get_HashWeights(hypergraph)
         hyp_hw = self.get_HashWeights(hyp)
+        #print("RANDOM HW", hyp_hw._weights, "\n\n\n")
+        print("RANDOM HW", hypergraph_hw._weights)
         self.path_calculator.prepare_iteration(hypergraph)
-        flow_paths = self._calculate_current_bandwidth(hypergraph, hypergraph_flows, hypergraph_hw)
         
+        hypergraph_hw = self.algorithm.step(hypergraph, hypergraph_flows, iteration_num=iteration, save_model=True)
+        
+        #print("HW", hypergraph_hw._weights)
+        #print(type(hypergraph_hw._weights.keys()))
+        hyp_keys = list(hypergraph_hw._weights.keys())
+        '''
+        for key in hyp_keys:
+            #for bucket in hypergraph_hw._weights[key]:
+                #bucket.weight = int(bucket.weight)
+                #print("BUCK", bucket)
+            #print("HYP KEYS", key, key[0], key[1])
+            if key[0] == 'graph_data' or key[1] == 'graph_data':
+                #print("COME IN")
+                #hyp_hw._weights.pop(key)
+                 hypergraph_hw._weights.pop(key)
+        '''
+        hypergraph_hw._weights.pop(('0', 'graph_data'), {})
+        hypergraph_hw._weights.pop(('1', 'graph_data'), {})
+        
+        for k in hyp_keys:
+            for kk in hypergraph_hw._weights[k]:
+                buck_lst = [hypergraph_hw._weights[k][kk]]
+                for b in buck_lst:
+                    b.weight = int(b.weight)
+        #self._calculate_current_bandwidth(hypergraph, hypergraph_flows, hypergraph_hw)
+        #hypergraph_hw = self.get_HashWeights(hypergraph)
+        #print("HYPERGRAPH FLOWS", hypergraph_flows, "\n\n\n", "HYPERRAPH HW", hypergraph_hw, "\n\n\n")
+        #print("HYP HW", hypergraph_hw._weights, "\n\n\n")
+        
+        #self._end_iteration()
+        self.path_calculator.prepare_iteration(hypergraph)
+        print("BEFORE FLOW PATH")
+        print("TOPO", hypergraph.nodes, "\n", hypergraph.edges, "\n\n\n")
+        print("FLOWS", hypergraph_flows, "\n\n\n")
+        print("HYP HW", hypergraph_hw._weights, "\n\n\n")
+        flow_paths = self._calculate_current_bandwidth(hypergraph, hypergraph_flows, hypergraph_hw)
+        print("FLOW PATHS", flow_paths)
+        #self._end_iteration()
         fl = 0
         for flow in current_flows:
             fl = 0
@@ -194,18 +287,28 @@ class ExperimentController:
             if fl == 1:
                 continue
             for path_elem in flow_paths[flow.flow_id]:
+                print("PATH ELEM", path_elem)
                 for i in range(len(subgraphs)):
                     if path_elem.from_ == str(i):
                         if flow.start != routers[i]['end']:
+                            print("from", i, flow.start, routers[i]['end'], type(flow.start), type(routers[i]['end']))
+                            
                             subgraph_flows[i].append(Flow(start=flow.start, end=routers[i]['end'], all_bandwidth=flow.all_bandwidth,
                                   start_time=flow.start_time,
                                   end_time=flow.end_time, bandwidth=flow.bandwidth, flow_id=flow.flow_id))
                     if path_elem.to_ == str(i):
                         if flow.end != routers[i]['start']:
+                            print("to", i, routers[i]['start'], flow.end)
+                            
                             subgraph_flows[i].append(Flow(start=routers[i]['start'], end=flow.end, all_bandwidth=flow.all_bandwidth,
                                   start_time=flow.start_time,
                                   end_time=flow.end_time, bandwidth=flow.bandwidth, flow_id=flow.flow_id))
-        return subgraph_flows, flow_paths, hyp_hw
+        #print("SUBGRAPH FLOWS NEW")
+        #print("SUB 0 NEW")
+        #print(subgraph_flows[0])
+        #print("SUB 1 NEW")
+        #print(subgraph_flows[1])
+        return subgraph_flows, flow_paths, hypergraph_hw
 
     def get_HashWeights(self, topology):
         hash_weights = HashWeights()
@@ -231,6 +334,7 @@ class ExperimentController:
         hash_weights: Optional[HashWeights] = None
         current_time = -self.period
         num_of_subgraphs = 2
+        #file = open("iter_phi.csv", "w")
         for iteration in range(self.num_iterations):
             start_time = time.time()
 
@@ -239,36 +343,49 @@ class ExperimentController:
             PhiCalculator.set_plot_folder(iteration_path)
 
             current_topo, current_time = self._get_current_topology_and_time(current_time)
-
+            #print("TOPO", current_topo.edges)
             LOG.info(f'current time: {current_time}')
             subgraphs, hypergraph, routers, hyp = self.generate_subgraphs(current_topo, num_of_subgraphs)
-            
+            #print("SUBGRAPHS", subgraphs)
+            #print("HYPERGRAPH")
+            #print(hypergraph.nodes, hypergraph.edges)
+
             current_flows = self.input_data.flows.get(current_time)
             flows, flow_paths, hash_weights = self.balance_hypergraph(subgraphs, hypergraph, hyp, current_flows, routers, iteration)
 
+            print("OUT OF FUNCTION")
+            #subgraph_hw = []
             apply_async_with_callback(subgraphs, flows, iteration) #####
+
+            #hash_weights._weights = {}
             for i in range(len(subgraphs)):
                 with open("hw-" + str(i) + "-pickle", 'rb') as file:
                     hw = dill.load(file)
+                    #subgraph_hw.append(hw)
                     hash_weights._weights.update(hw._weights)
+                    #print("SUBGRAPH HW:", hw._weights)
 
-            print("HW")
-            print(hash_weights._weights)
+            #for i in subgraph_hw:
+            #    print("SUBGRAPH:", i._weights)
+
+            
             self.path_calculator.prepare_iteration(current_topo)
-            flow_paths = self._calculate_current_bandwidth(current_topo, current_flows, hash_weights)
+            #print("HASH_WEIGHTS BEFORE BALANCE", hash_weights._weights)
+            self._calculate_current_bandwidth(current_topo, current_flows, hash_weights)
             phi = self.phi(current_topo)
             
-            print("FLOW PATHS")
-            print(flow_paths)
-
             LOG.info(f'Iteration: {iteration}, phi: {phi}')
+            #file.write(str(iteration) + ',' + str(phi) + ',')
             with open('iter_phi_par.csv', 'a') as file:
                 file.write(str(iteration) + ',' + str(phi) + ',' + str(len(current_flows)) + ',' + str(time.time() - start_time) + '\n')
 
+            #hash_weights = self.algorithm.step(current_topo, current_flows, iteration_num=iteration, save_model=True)
+            #print("HASH_WEIGHTS", hash_weights._weights)
             self._end_iteration()
         self._calculate_current_bandwidth(current_topo, current_flows, hash_weights)
         phi = self.phi(current_topo)
         LOG.info(f'phi after experiment: {phi}')
+        #file.close()
         return phi
 
 
