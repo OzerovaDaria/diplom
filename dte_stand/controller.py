@@ -141,16 +141,25 @@ class ExperimentController:
                         for k in range(len(nodes)):
                             if link[0] in nodes[k]:
                                 if  hypergraph.has_edge(str(i), str(k)):
-                                    hypergraph.add_edge(str(i), str(k), keys=1, id='0', bandwidth=40000000, weight=random.randint(1, 7), 
-                                                                                        start=link[0], end=link[1])
-                                    hyp.add_edge(link[0], link[1], keys=1, id='0', bandwidth=40000000, weight=random.randint(1, 7))
+                                    hypergraph.add_edge(str(i), str(k), keys=1, id='0', bandwidth=40000000, weight=random.randint(1, 7))
+                                    hyp.add_edge(str(int(link[0]) + 1), str(int(link[1]) + 1), keys=1, id='0', bandwidth=40000000, weight=random.randint(1, 7))
                                 else:
-                                    hypergraph.add_edge(str(i), str(k), keys=0, id='0', bandwidth=40000000, weight=random.randint(1, 7),
-                                                                                        start=link[0], end=link[1])
-                                    hyp.add_edge(link[0], link[1], keys=0, id='0', bandwidth=40000000, weight=random.randint(1, 7))
+                                    hypergraph.add_edge(str(i), str(k), keys=0, id='0', bandwidth=40000000, weight=random.randint(1, 7))
+                                    hyp.add_edge(str(int(link[0]) + 1), str(int(link[1]) + 1), keys=0, id='0', bandwidth=40000000, weight=random.randint(1, 7))
                 
-        routers[0] = {'start': '8', 'end': '5'}
-        routers[1] = {'start': '9', 'end': '12'}
+        for i in range(len(subgraphs)):
+            max_end, max_start = 0, 0
+            free_routers = []
+            for node in list(subgraphs[i].nodes):
+                if node in hyp.nodes:
+                    free_routers.append(node)
+            for router  in free_routers:
+                if hyp.degree(router) > max_end:
+                    max_end = hyp.degree(router)
+                    routers[i]['end'] = router
+                if hyp.degree(router) >= max_start and routers[i]['end'] != router:
+                    max_start = subgraphs[i].degree(router)
+                    routers[i]['start'] = router
 
         return subgraphs, hypergraph, routers, hyp
 
