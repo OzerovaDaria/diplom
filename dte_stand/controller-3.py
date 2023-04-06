@@ -1,5 +1,3 @@
-
-
 import networkx
 import os
 import random
@@ -103,6 +101,7 @@ class ExperimentController:
         self.hash_function.end_iteration()
 
     def generate_subgraphs(self, topology, num_of_subgraphs):
+        self.path_calculator.prepare_iteration(topology)
         my_out_edges = topology.edges(nbunch='2', keys=True)
         mapping = {}
         for i in topology.nodes():
@@ -134,6 +133,7 @@ class ExperimentController:
             for i in current_topology.nodes():
                 mapping[i] = str(int(i) + 1)
             subgraphs.append(networkx.relabel_nodes(current_topology, mapping))
+        
         for i in range(num_of_subgraphs):
             for j in nodes[i]:
                 for link in topology.in_edges(str(j)):
@@ -141,17 +141,29 @@ class ExperimentController:
                         for k in range(len(nodes)):
                             if link[0] in nodes[k]:
                                 if  hypergraph.has_edge(str(i), str(k)):
-                                    hypergraph.add_edge(str(i), str(k), keys=1, id='0', bandwidth=40000000, weight=random.randint(1, 7), 
-                                                                                        start=link[0], end=link[1])
-                                    hyp.add_edge(link[0], link[1], keys=1, id='0', bandwidth=40000000, weight=random.randint(1, 7))
+                                    hypergraph.add_edge(str(i), str(k), keys=1, id='0', bandwidth=40000000, weight=random.randint(1, 7))
+                                    hyp.add_edge(str(int(link[0]) + 1), str(int(link[1]) + 1), keys=1, id='0', bandwidth=40000000, weight=random.randint(1, 7))
                                 else:
-                                    hypergraph.add_edge(str(i), str(k), keys=0, id='0', bandwidth=40000000, weight=random.randint(1, 7),
-                                                                                        start=link[0], end=link[1])
-                                    hyp.add_edge(link[0], link[1], keys=0, id='0', bandwidth=40000000, weight=random.randint(1, 7))
-                
-        routers[0] = {'start': '8', 'end': '5'}
-        routers[1] = {'start': '9', 'end': '12'}
+                                    hypergraph.add_edge(str(i), str(k), keys=0, id='0', bandwidth=40000000, weight=random.randint(1, 7))
+                                    hyp.add_edge(str(int(link[0]) + 1), str(int(link[1]) + 1), keys=0, id='0', bandwidth=40000000, weight=random.randint(1, 7))
 
+        print("HYPERGRAPH")
+        print(hypergraph.nodes)
+        print(hypergraph.edges)
+        for i in range(len(subgraphs)):
+            max_end, max_start = 0, 0
+            free_routers = []
+            for node in list(subgraphs[i].nodes):
+                if node in hyp.nodes:
+                    free_routers.append(node)
+            for router  in free_routers:
+                if hyp.degree(router) > max_end:
+                    max_end = hyp.degree(router)
+                    routers[i]['end'] = router
+                if hyp.degree(router) >= max_start and routers[i]['end'] != router:
+                    max_start = subgraphs[i].degree(router)
+                    routers[i]['start'] = router
+        
         return subgraphs, hypergraph, routers, hyp
 
     def balance_hypergraph(self, subgraphs, hypergraph, hyp, current_flows, routers, iteration):
@@ -174,11 +186,40 @@ class ExperimentController:
                               start_time=flow.start_time,
                               end_time=flow.end_time, bandwidth=flow.bandwidth, flow_id=flow.flow_id))
         
+        '''
         hypergraph_hw = self.get_HashWeights(hypergraph)
         hyp_hw = self.get_HashWeights(hyp)
         self.path_calculator.prepare_iteration(hypergraph)
         flow_paths = self._calculate_current_bandwidth(hypergraph, hypergraph_flows, hypergraph_hw)
+        '''
+
+        def find_sub(subgraphs, num):
+            for i in range(len(subgraphs)):
+                if num in subgraphs[i]:
+                    return i
+            return None
+        #self.path_calculator.prepare_iteration(hyp)
+        #hyp_hw = self.algorithm.step(hyp, hyp_fl, iteration)
+        hyp_hw = self.get_HashWeights(hyp)
+        print("HYP HW", '\n\n', hyp_hw)
+        hypergraph_hw = self.get_HashWeights(hypergraph)
+        '''
+        hypergraph_hw = hyp_hw
+        hyp_keys = [hypergraph_hw._weights.keys()]
+        for k in hyp_keys:
+            hypp_keys = [hypergraph_hw._weights[k]]
+            for kk in hypp_keys:
+                buck_lst = [hypergraph_hw._weights[k][kk]]
+                for b in buck_lst:
+                    b.from_ = find_sub(subgraphs, b.from_)
+                    b.to_ = find_sub(subgraphs, b.to_)
+            k[0], k[1] = find_sub(subgraphs, k[0]), find_sub(subgraphs, k[1])
+        print("HEPERGRAPH HW", hypergraph_hw)
+        '''
+        self.path_calculator.prepare_iteration(hypergraph)
+        flow_paths = self._calculate_current_bandwidth(hypergraph, hypergraph_flows, hypergraph_hw)
         
+
         fl = 0
         for flow in current_flows:
             fl = 0
@@ -246,8 +287,11 @@ class ExperimentController:
                     hw = dill.load(file)
                     hash_weights._weights.update(hw._weights)
 
-            print("HW")
-            print(hash_weights._weights)
+            print("TOPO", current_topo.nodes)
+            for flow in current_flows:
+                print(flow.flow_id, flow.start, flow.end)
+            #print("HW")
+            #print(hash_weights._weights)
             self.path_calculator.prepare_iteration(current_topo)
             flow_paths = self._calculate_current_bandwidth(current_topo, current_flows, hash_weights)
             phi = self.phi(current_topo)
