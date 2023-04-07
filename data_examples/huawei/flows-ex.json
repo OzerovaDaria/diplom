@@ -1,0 +1,35 @@
+[
+    {
+        "start": "14",
+        "end": "8",
+        "all_bandwidth": {
+            "0": 1311753
+        },
+        "start_time": 0,
+        "end_time": 59863047,
+        "bandwidth": null,
+        "flow_id": "03694d33-597d-415d-b390-d8fc27637155"
+    },
+    {
+        "start": "13",
+        "end": "1",
+        "all_bandwidth": {
+            "0": 2167458
+        },
+        "start_time": 0,
+        "end_time": 5787047,
+        "bandwidth": null,
+        "flow_id": "e91ec48f-ffe1-42f7-8147-762f5b54f71c"
+    },
+    {
+        "start": "13",
+        "end": "5",
+        "all_bandwidth": {
+            "0": 1762811
+        },
+        "start_time": 0,
+        "end_time": 610692958500,
+        "bandwidth": null,
+        "flow_id": "02501ad8-872d-4862-80c9-79c8bfe43cbd"
+    }
+]

@@ -12,6 +12,7 @@ from dte_stand.phi_calculator import PhiCalculator
 from dte_stand.history import HistoryTracker
 from dte_stand.config import Config
 from typing import Optional, Callable
+from copy import deepcopy
 
 import logging
 LOG = logging.getLogger(__name__)
@@ -177,12 +178,10 @@ class ExperimentController:
                 hypergraph_flows.append(Flow(start=start, end=end, all_bandwidth=flow.all_bandwidth,
                               start_time=flow.start_time,
                               end_time=flow.end_time, bandwidth=flow.bandwidth, flow_id=flow.flow_id))
-                hyp_fl.append(Flow(start=flow.start, end=flow.end, all_bandwidth=flow.all_bandwidth,
-                              start_time=flow.start_time,
-                              end_time=flow.end_time, bandwidth=flow.bandwidth, flow_id=flow.flow_id))
         
         hypergraph_hw = self.get_HashWeights(hypergraph)
         hyp_hw = self.get_HashWeights(hyp)
+        #hypergraph_hw = self.copy_weights(hyp_hw, subgraphs)
         self.path_calculator.prepare_iteration(hypergraph)
         flow_paths = self._calculate_current_bandwidth(hypergraph, hypergraph_flows, hypergraph_hw)
         
@@ -207,6 +206,31 @@ class ExperimentController:
                                   start_time=flow.start_time,
                                   end_time=flow.end_time, bandwidth=flow.bandwidth, flow_id=flow.flow_id))
         return subgraph_flows, flow_paths, hyp_hw
+
+    def find_sub(self, subgraphs, num):
+        for i in range(len(subgraphs)):
+            if num in subgraphs[i]:
+                return str(i)
+        return None
+
+    def copy_weights(self, hw, subgraphs):
+        hypergraph_hw = HashWeights()
+        hyp_keys = list(hw._weights.keys())
+        for k in hyp_keys:
+            #hyp_k = (self.find_sub(subgraphs, k[0]), self.find_sub(subgraphs, k[1]))
+            for kk in hw._weights[k]:
+                #hyp_kk = (self.find_sub(subgraphs, kk[0]), kk[1])
+                buck_lst = [hw._weights[k][kk]]
+                for b in buck_lst:
+                    print(k, kk, b.edge.index, b.weight)
+                    #hyp_b = deepcopy(b)
+                    #hyp_b.edge.from_ = self.find_sub(subgraphs, b.edge.from_)
+                    #hyp_b.edge.to_ = self.find_sub(subgraphs, b.edge.to_)
+                    hypergraph_hw.put(self.find_sub(subgraphs, k[0]), self.find_sub(subgraphs, k[1]),
+                                     self.find_sub(subgraphs, kk[0]), b.edge.index, b.weight)
+        print(hypergraph_hw._weights)
+        return hypergraph_hw
+
 
     def get_HashWeights(self, topology):
         hash_weights = HashWeights()
@@ -257,8 +281,8 @@ class ExperimentController:
             flow_paths = self._calculate_current_bandwidth(current_topo, current_flows, hash_weights)
             phi = self.phi(current_topo)
             
-            print("FLOW PATHS")
-            print(flow_paths)
+            #print("FLOW PATHS")
+            #print(flow_paths)
 
             LOG.info(f'Iteration: {iteration}, phi: {phi}')
             with open('iter_phi_par.csv', 'a') as file:

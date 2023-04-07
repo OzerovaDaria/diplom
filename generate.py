@@ -21,13 +21,13 @@ def generate_from_dataset():
     pretty_res = json.dumps(json.loads(result.json()), indent=4)
 
     # open result file and write the flow data
-    with open('flows.log', 'w') as f:
+    with open('flows.json', 'w') as f:
         f.write(pretty_res)
 
 
 def generate_synthetic(mode: str, seed: int = None):
     # get a topology
-    with open('data_examples/rhombus/topology.gml', mode='rb') as f:
+    with open('data_examples/huawei/topology.gml', mode='rb') as f:
         topology = networkx.readwrite.read_gml(f)
 
     # create generator
@@ -66,7 +66,7 @@ def generate_synthetic(mode: str, seed: int = None):
     matrices = generator.generate(50)
 
     # generate flows using uniform flow generator
-    flow_generator = UniformFlowGenerator(5, 20000, 500000)
+    flow_generator = UniformFlowGenerator(5, 20000, 1000000)
 
     # run the generator
     result = flow_generator.generate(matrices, 30000)
