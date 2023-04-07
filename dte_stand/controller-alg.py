@@ -1,3 +1,5 @@
+
+
 import networkx
 import os
 import random
@@ -126,25 +128,54 @@ class ExperimentController:
             nodes.append(np.argwhere(np.array(membership) == i).ravel())
             nodes[i] = [str(x) for x in nodes[i]]
             current_nodes = topology.nodes
+            '''
+            if i == num_of_subgraphs:
+                for k in range(num_of_subgraphs):
+
+                    for j in range(num_of_subgraphs):
+                        if k == j:
+                            continue
+                        if current_topology.has_edge(str(k), str(j))
+                            fl = 1
+                            break
+            '''
             for node in current_nodes:
                 if node not in nodes[i]:
                     current_topology.remove_node(node)
             for i in current_topology.nodes():
                 mapping[i] = str(int(i) + 1)
             subgraphs.append(networkx.relabel_nodes(current_topology, mapping))
+        
+        print("NODES", nodes)
+        hyp_nodes = set()
         for i in range(num_of_subgraphs):
             for j in nodes[i]:
                 for link in topology.in_edges(str(j)):
                     if link[0] not in nodes[i]:
                         for k in range(len(nodes)):
                             if link[0] in nodes[k]:
+                                hyp_nodes.add(str(int(link[0]) + 1))
+                                hyp_nodes.add(str(int(link[1]) + 1))
                                 if  hypergraph.has_edge(str(i), str(k)):
                                     hypergraph.add_edge(str(i), str(k), keys=1, id='0', bandwidth=40000000, weight=random.randint(1, 7))
                                     hyp.add_edge(str(int(link[0]) + 1), str(int(link[1]) + 1), keys=1, id='0', bandwidth=40000000, weight=random.randint(1, 7))
                                 else:
                                     hypergraph.add_edge(str(i), str(k), keys=0, id='0', bandwidth=40000000, weight=random.randint(1, 7))
                                     hyp.add_edge(str(int(link[0]) + 1), str(int(link[1]) + 1), keys=0, id='0', bandwidth=40000000, weight=random.randint(1, 7))
-                
+
+        print("HYP NODES", hyp_nodes)
+        hyp_topo: networkx.MultiDiGraph = copy.deepcopy(topology)
+        current_nodes = topology.nodes
+        mapping = {}
+        for node in current_nodes:
+            if str(int(node) + 1) not in hyp_nodes:
+                hyp_topo.remove_node(node)
+        for i in hyp_topo.nodes():
+                mapping[i] = str(int(i) + 1)
+        hyp_topo = networkx.relabel_nodes(hyp_topo, mapping)
+        print("HYP TOPO", hyp_topo.nodes, hyp_topo.edges)
+            
+        
         for i in range(len(subgraphs)):
             max_end, max_start = 0, 0
             free_routers = []
@@ -159,17 +190,19 @@ class ExperimentController:
                     max_start = subgraphs[i].degree(router)
                     routers[i]['start'] = router
 
-        return subgraphs, hypergraph, routers, hyp
+        return subgraphs, hypergraph, routers, hyp, hyp_topo
 
-    def balance_hypergraph(self, subgraphs, hypergraph, hyp, current_flows, routers, iteration):
-        hypergraph_flows, hyp_fl = [], []
+    def balance_hypergraph(self, subgraphs, hypergraph, hyp, hyp_topo, current_flows, routers, iteration):
+        hypergraph_flows, hyp_fl, hypp_fl = [], [], []
         subgraph_flows = [[] for x in range(len(subgraphs))]
         start, end = 0, 0
         for flow in current_flows:
             for i in range(len(subgraphs)):
                 if flow.start in subgraphs[i]:
                     start = str(i)
+                    hyp_start = routers[i]['start']
                 if flow.end in subgraphs[i]:
+                    hyp_end = routers[i]['end']
                     end = str(i)
             if start == end:
                 subgraph_flows[int(start)].append(flow)
@@ -180,7 +213,14 @@ class ExperimentController:
                 hyp_fl.append(Flow(start=flow.start, end=flow.end, all_bandwidth=flow.all_bandwidth,
                               start_time=flow.start_time,
                               end_time=flow.end_time, bandwidth=flow.bandwidth, flow_id=flow.flow_id))
-        
+                hypp_fl.append(Flow(start=hyp_start, end=hyp_end, all_bandwidth=flow.all_bandwidth,
+                              start_time=flow.start_time,
+                              end_time=flow.end_time, bandwidth=flow.bandwidth, flow_id=flow.flow_id))
+
+        #self.path_calculator.prepare_iteration(hyp_topo)
+        #hypp_hw = self.algorithm.step(hyp_topo, hypp_fl, iteration)
+        #print("HYPP HW", hypp_hw)
+
         hypergraph_hw = self.get_HashWeights(hypergraph)
         hyp_hw = self.get_HashWeights(hyp)
         self.path_calculator.prepare_iteration(hypergraph)
@@ -242,10 +282,10 @@ class ExperimentController:
             current_topo, current_time = self._get_current_topology_and_time(current_time)
 
             LOG.info(f'current time: {current_time}')
-            subgraphs, hypergraph, routers, hyp = self.generate_subgraphs(current_topo, num_of_subgraphs)
+            subgraphs, hypergraph, routers, hyp, hyp_topo = self.generate_subgraphs(current_topo, num_of_subgraphs)
             
             current_flows = self.input_data.flows.get(current_time)
-            flows, flow_paths, hash_weights = self.balance_hypergraph(subgraphs, hypergraph, hyp, current_flows, routers, iteration)
+            flows, flow_paths, hash_weights = self.balance_hypergraph(subgraphs, hypergraph, hyp, hyp_topo, current_flows, routers, iteration)
 
             apply_async_with_callback(subgraphs, flows, iteration) #####
             for i in range(len(subgraphs)):
@@ -253,6 +293,8 @@ class ExperimentController:
                     hw = dill.load(file)
                     hash_weights._weights.update(hw._weights)
 
+            print("HW")
+            print(hash_weights._weights)
             self.path_calculator.prepare_iteration(current_topo)
             flow_paths = self._calculate_current_bandwidth(current_topo, current_flows, hash_weights)
             phi = self.phi(current_topo)
