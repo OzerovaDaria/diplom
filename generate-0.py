@@ -21,7 +21,7 @@ def generate_from_dataset():
     pretty_res = json.dumps(json.loads(result.json()), indent=4)
 
     # open result file and write the flow data
-    with open('flows.log', 'w') as f:
+    with open('flows.json', 'w') as f:
         f.write(pretty_res)
 
 
@@ -63,13 +63,13 @@ def generate_synthetic(mode: str, seed: int = None):
     generator = DemandMatrixGenerator(min_bw_coef, max_bw_coef, topology, mode=mode, seed=seed)
 
     # generate some matrices
-    matrices = generator.generate(8)
+    matrices = generator.generate(10)
 
     # generate flows using uniform flow generator
-    flow_generator = UniformFlowGenerator(1, 2000000000, 5000000000000)
+    flow_generator = UniformFlowGenerator(5, 20000, 100000)
 
     # run the generator
-    result = flow_generator.generate(matrices, 20000)
+    result = flow_generator.generate(matrices, 30000)
 
     # convert results to a string with optional pretty print - can be removed, only result.json() is needed
     # But results will be unreadable for a human is pretty print is removed

@@ -145,7 +145,8 @@ class ExperimentController:
                                 else:
                                     hypergraph.add_edge(str(i), str(k), keys=0, id='0', bandwidth=40000000, weight=random.randint(1, 7))
                                     hyp.add_edge(str(int(link[0]) + 1), str(int(link[1]) + 1), keys=0, id='0', bandwidth=40000000, weight=random.randint(1, 7))
-                
+
+        #print("HYP", hyp.nodes, hyp.edges)        
         for i in range(len(subgraphs)):
             max_end, max_start = 0, 0
             free_routers = []
@@ -159,35 +160,54 @@ class ExperimentController:
                 if hyp.degree(router) >= max_start and routers[i]['end'] != router:
                     max_start = subgraphs[i].degree(router)
                     routers[i]['start'] = router
-
+        '''
+        print("SUBGRAPHS")
+        for i in range(len(subgraphs)):
+            print(subgraphs[i].nodes)
+        print("ROUTERS", routers)
+        '''
         return subgraphs, hypergraph, routers, hyp
 
     def balance_hypergraph(self, subgraphs, hypergraph, hyp, current_flows, routers, iteration):
-        hypergraph_flows, hyp_fl = [], []
+        hypergraph_flows, hypp_fl = [], []
         subgraph_flows = [[] for x in range(len(subgraphs))]
         start, end = 0, 0
         for flow in current_flows:
             for i in range(len(subgraphs)):
                 if flow.start in subgraphs[i]:
                     start = str(i)
+                hyp_start = routers[i]['start']
                 if flow.end in subgraphs[i]:
                     end = str(i)
+                hyp_end = routers[i]['end']
             if start == end:
                 subgraph_flows[int(start)].append(flow)
             else:
                 hypergraph_flows.append(Flow(start=start, end=end, all_bandwidth=flow.all_bandwidth,
                               start_time=flow.start_time,
                               end_time=flow.end_time, bandwidth=flow.bandwidth, flow_id=flow.flow_id))
-        
+                hypp_fl.append(Flow(start=hyp_start, end=hyp_end, all_bandwidth=flow.all_bandwidth,
+                              start_time=flow.start_time,
+                              end_time=flow.end_time, bandwidth=flow.bandwidth, flow_id=flow.flow_id))
+
+
         hypergraph_hw = self.get_HashWeights(hypergraph)
         hyp_hw = self.get_HashWeights(hyp)
+        #print("HYPP FLOWS", hypp_fl)
+        #print("HYPP", hyp.nodes, hyp.edges)
+        #self.path_calculator.prepare_iteration(hyp)
+        #hypp_hw = self.algorithm.step(hyp, hypp_fl, iteration)
+        #print("HYPP HW", hypp_hw)
         #hypergraph_hw = self.copy_weights(hyp_hw, subgraphs)
         self.path_calculator.prepare_iteration(hypergraph)
         flow_paths = self._calculate_current_bandwidth(hypergraph, hypergraph_flows, hypergraph_hw)
         
+        cnt = 0
         fl = 0
         for flow in current_flows:
+            print("FLOW", cnt, len(current_flows))
             fl = 0
+            cnt += 1
             for i in range(len(subgraph_flows)):
                 if flow in subgraph_flows[i]:
                     fl = 1
@@ -265,11 +285,16 @@ class ExperimentController:
 
             current_topo, current_time = self._get_current_topology_and_time(current_time)
 
+            print("TOPOLOGY", current_topo.nodes)
             LOG.info(f'current time: {current_time}')
             subgraphs, hypergraph, routers, hyp = self.generate_subgraphs(current_topo, num_of_subgraphs)
             
             current_flows = self.input_data.flows.get(current_time)
             flows, flow_paths, hash_weights = self.balance_hypergraph(subgraphs, hypergraph, hyp, current_flows, routers, iteration)
+            
+            print("SUBGRAPHS")
+            for i in range(len(subgraphs)):
+                print(subgraphs[i].nodes)
 
             apply_async_with_callback(subgraphs, flows, iteration) #####
             for i in range(len(subgraphs)):

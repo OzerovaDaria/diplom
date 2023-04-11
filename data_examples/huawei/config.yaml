@@ -3,8 +3,8 @@ algorithm: dte_stand.algorithm.MateAlgorithm
 path_calculator: dte_stand.paths.DAGCalculator
 phi: dte_stand.phi_calculator.PhiCalculator.calculate_phi
 
-lsdb_period: 30000
-iterations: 50
+lsdb_period: 20000
+iterations: 1
 plot_period: 25
 
 log_path: ./experiment.log
@@ -16,8 +16,8 @@ store_hashweights: 0
 store_nexthops: 0
 
 mate:
-  horizons: 200
-  episodes: 50
+  horizons: 5
+  episodes: 5
   gamma: 0.99
   gae_lambda: 0.95
   reward: min_max

@@ -49,8 +49,7 @@ class UniformFlowGenerator:
         """
         if amount == 1:
             return [total]
-        print("RANDOM SAMPLE", range(1, total), amount - 1)
-        generated: list[int] = random.sample(range(1, total), amount - 1)
+        generated: list[int] = random.choices(range(1, total), k=3)
         generated.sort()
         return [generated[0]] + [generated[i+1] - generated[i] for i in range(amount - 2)] + [total - generated[-1]]
 
